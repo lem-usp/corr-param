@@ -100,3 +100,46 @@ def triang_from_params(p):
     b[n-1,n-1] = np.product(np.sin(p[n-1, 0:n-1]))
 
     return b
+
+def calc_path(ms, bp, i, j, s=100, pcs=[0]):
+    m0 = ms[i]
+    r2 = np.zeros(s)
+    flex = np.zeros(s)
+    isoc = []
+
+    iso = np.ones(m0.shape[0])/np.sqrt(m0.shape[0])
+    diff = (bp[j][1] - bp[i][1])/100
+    p = bp[i][1]
+
+    for i in xrange(100):
+        r2[i] = calc_r2(m0)
+        flex[i] = flexibility(m0)
+        for j in pcs:
+            isoc.append(np.abs(np.dot(np.linalg.eig(m0)[1][:,j], iso)))
+
+        p += diff
+        new_b = triang_from_params(p)
+        m0 = np.dot(new_b, new_b.T)
+
+    return r2, flex, isoc
+
+def flexibility(matrix1, num_vectors=1000):
+    traits = matrix1.shape[0]
+    rand_vec = np.random.multivariate_normal(np.zeros(traits),
+                                             np.identity(traits, float),
+                                             num_vectors).T
+
+    rand_vec = rand_vec/np.sqrt((rand_vec*rand_vec).sum(0))
+
+    delta_z1 = np.dot(matrix1, rand_vec)
+
+    ndelta_z1 = delta_z1/np.sqrt((delta_z1*delta_z1).sum(0))
+
+    return np.mean(np.diag(np.dot(ndelta_z1.T, rand_vec)))
+
+def calc_r2(m):
+   tr = m.shape[1]
+   x, y = np.asarray(np.invert(np.tri(tr, tr, dtype=bool)), dtype=float).nonzero()
+   r2_tot = np.mean(m[x, y] * m[x, y])
+   return r2_tot
+
