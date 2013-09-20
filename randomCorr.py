@@ -1,4 +1,5 @@
 import numpy as np
+import gc
 
 def rand_corr(n, ke):
     """Return a n x n random correlation matrix"""
@@ -101,27 +102,56 @@ def triang_from_params(p):
 
     return b
 
-def calc_path(ms, bp, i, j, s=100, pcs=[0]):
+def calc_path(ms, bp, i, j, s=100, pcs=[0], calc_rs=False, calc_ev=False):
     m0 = ms[i]
+    m0_initial = ms[i]
     r2 = np.zeros(s)
     flex = np.zeros(s)
     isoc = []
+    evs = []
+    rs = []
 
     iso = np.ones(m0.shape[0])/np.sqrt(m0.shape[0])
     diff = (bp[j][1] - bp[i][1])/100
     p = bp[i][1]
 
     for i in xrange(100):
+        if calc_ev:
+            evs.append(np.linalg.eigh(m0)[0])
         r2[i] = calc_r2(m0)
         flex[i] = flexibility(m0)
         for j in pcs:
             isoc.append(np.abs(np.dot(np.linalg.eig(m0)[1][:,j], iso)))
 
+        if calc_rs:
+            rs.append(random_skewers(m0_initial, m0))
+
         p += diff
         new_b = triang_from_params(p)
+        del m0
         m0 = np.dot(new_b, new_b.T)
 
-    return r2, flex, isoc
+    gc.collect()
+    if calc_rs:
+        return r2, flex, isoc, rs
+
+    if not calc_ev:
+        return r2, flex, isoc
+    else:
+        return r2, flex, isoc, evs
+
+def random_skewers(matrix1, matrix2, num_vectors=1000):
+    traits = matrix1.shape[0]
+    rand_vec = np.random.multivariate_normal(np.zeros(traits),
+                                             np.identity(traits, float),
+                                             num_vectors).T
+    delta_z1 = np.dot(matrix1, rand_vec)
+    delta_z2 = np.dot(matrix2, rand_vec)
+
+    ndelta_z1 = delta_z1/np.sqrt((delta_z1*delta_z1).sum(0))
+    ndelta_z2 = delta_z2/np.sqrt((delta_z2*delta_z2).sum(0))
+
+    return np.mean(np.diag(np.dot(ndelta_z1.T, ndelta_z2)))
 
 def flexibility(matrix1, num_vectors=1000):
     traits = matrix1.shape[0]
