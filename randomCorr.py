@@ -102,7 +102,7 @@ def triang_from_params(p):
 
     return b
 
-def calc_path(ms, bp, i, j, s=100, pcs=[0], calc_rs=False, calc_ev=False):
+def calc_path(ms, bp, i, j, s=100, pcs=[0], calc_rs=False, calc_ev=False, return_matrices=False):
     m0 = ms[i]
     m0_initial = ms[i]
     r2 = np.zeros(s)
@@ -110,6 +110,9 @@ def calc_path(ms, bp, i, j, s=100, pcs=[0], calc_rs=False, calc_ev=False):
     isoc = []
     evs = []
     rs = []
+
+    if return_matrices:
+        ms_int = [m0]
 
     iso = np.ones(m0.shape[0])/np.sqrt(m0.shape[0])
     diff = (bp[j][1] - bp[i][1])/100
@@ -131,12 +134,16 @@ def calc_path(ms, bp, i, j, s=100, pcs=[0], calc_rs=False, calc_ev=False):
         del m0
         m0 = np.dot(new_b, new_b.T)
 
+        if return_matrices:
+            ms_int.append(m0)
+
     gc.collect()
     if calc_rs:
         return r2, flex, isoc, rs
 
     if not calc_ev:
-        return r2, flex, isoc
+        if return_matrices:
+            return r2, flex, isoc, ms_int
     else:
         return r2, flex, isoc, evs
 
